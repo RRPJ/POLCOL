@@ -1,5 +1,5 @@
 # POLCOL
-A POLarisation CORrelator for astronomers working with radio data.
+A POLarisation COreLator for astronomers working with radio data.
 
 This code works with the Rolling Hough Transform by Susan Clarke - https://github.com/seclark/RHT
 Be sure to download this repository and add the rht.py and RHT_tools.py files to the same directory as this repository.
