@@ -16,4 +16,4 @@ To use, simply open polcol.py in a text editor. There are a couple of things to 
 6. Set polar to True if you want a polarplot, and distance to True if you want a distance - polarisation angle plot. The script saves the images in the OUTPUT directory defined in rht.py.
 7. Go to the function put_XYT and edit the variable header_keywords so that you have all the keywords in there that you want to keep. This is useful if you want to preserve certain axes you had in your input image, like RA and DEC.
 
-Once that's done, simply type 'python polcol.py'. 
+Once that's done, simply run the file by typing 'python polcol.py' in your terminal. 
