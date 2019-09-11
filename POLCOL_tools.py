@@ -296,8 +296,8 @@ def plot_dist_polangle(catalogue, image_filename):
     for index in j:
         l[index] -= 180
 
-    plt.errorbar(dist, l, yerr=err_pol_angle,
-                 linestyle='none', marker='*', markersize=10, label='stars')
+    plt.errorbar(dist, l, xerr=[dist - dist_err_low, dist_err_high - dist],
+                 yerr=err_pol_angle, linestyle='none', marker='*', markersize=10, label='stars')
     plt.barh(popt[0], height=popt[1], width=1.1 * np.max(dist), alpha=0.5,
              facecolor='g', label='RHT angle 1-sigma range')
     plt.xlabel('Distance (pc)')
