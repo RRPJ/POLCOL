@@ -4,7 +4,7 @@ A POLarisation COrreLator for astronomers working with radio data.
 This code works with the Rolling Hough Transform by Susan Clarke - https://github.com/seclark/RHT
 Be sure to download this repository and add the rht.py and RHT_tools.py files to the same directory as this repository.
 
-The current implementation has stellar catalogues ONLY. The script assumes the catalogue to have 'ra' and 'dec' axes.
+The current implementation has stellar catalogues ONLY. The script assumes the catalogue to have 'ra' and 'dec' axes. The error in distance is assumed to be lower and upper estimates. In other words: dist - dist_err_low is the lower distance, while dist_err_high - dist is the upper distance. Be careful when implementing other catalogues.
 
 To use, simply open polcol.py in a text editor. There are a couple of things to change before running:
 
