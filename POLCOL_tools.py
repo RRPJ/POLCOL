@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+import csv
 
 from astropy.io import fits
 from astropy.nddata import Cutout2D
@@ -140,8 +141,8 @@ def make_polarplot(image_filename):
         fig, 111, theta=[-0.5 * np.pi, 0.5 * np.pi], radius=[0, ydata.max() * 1.05])
     aux_ax1.plot(xdata, ydata, alpha=0.75)
 #    aux_ax1.fill_between(xdata, y1=ydata, y2=0, facecolor='blue', interpolate=True, alpha=0.10)
-    #plt.axhline(np.max(ydata), color='red', alpha=0.75)
-    plt.savefig('polarplot_' + os.path.basename(image_filename) +
+    # plt.axhline(np.max(ydata), color='red', alpha=0.75)
+    plt.savefig('polarplot_' + os.path.basename(image_filename).split('.')[0] +
                 '.png', dpi=600, bbox_inches='tight')
     plt.show()
 
@@ -233,7 +234,8 @@ def extract_data(catalogue, image_filename):
     pol_angle = data['pa'][good_indices]
     err_pol_angle = data['e_pa'][good_indices]
     dist = data['r_est'][good_indices]
-    # TO BE IMPLEMENTED: DISTANCE ERROR
+    dist_err_low = data['r_lo'][good_indices]
+    dist_err_high = data['r_hi'][good_indices]
 
     # NOTE: angles from squares not implemented yet.
     # XX, YY = draw_squares(catalogue, image_filename, square_size)
@@ -249,7 +251,7 @@ def extract_data(catalogue, image_filename):
         wlen, save=False)  # x-axis containing angles
     thets_deg = thets_arr * 180 / np.pi
 
-    return pol_angle, err_pol_angle, dist, thets_deg, h_norm
+    return pol_angle, err_pol_angle, dist, dist_err_low, dist_err_high, thets_deg, h_norm
 
 
 def gaussian(x, mu, sig):
@@ -259,7 +261,7 @@ def gaussian(x, mu, sig):
 def plot_dist_polangle(catalogue, image_filename):
     """ Plots the distance versus polarisation angle plot. This contains the stars, but also the RHT angle around the stars, averaged. This means that you assume that you are looking at one "zone" with a related RHT angle. """
 
-    pol_angle, err_pol_angle, dist, thets_deg, h_norm = extract_data(
+    pol_angle, err_pol_angle, dist, dist_err_low, dist_err_high, thets_deg, h_norm = extract_data(
         catalogue, image_filename)
 
     # Shift lower half of plot since polarisation is modulo pi
@@ -280,7 +282,7 @@ def plot_dist_polangle(catalogue, image_filename):
     plt.xlabel('Polarisation angle (degrees)')
     plt.ylabel('Intensity (normalised)')
     plt.legend()
-    plt.savefig('rhtdistribution_' + os.path.basename(image_filename) +
+    plt.savefig('rhtdistribution_' + os.path.basename(image_filename).split('.')[0] +
                 '.png', dpi=600, bbox_inches='tight')
     plt.show()
 
@@ -303,6 +305,17 @@ def plot_dist_polangle(catalogue, image_filename):
     plt.xlabel('Distance (pc)')
     plt.ylabel('Polarisation angle (degrees)')
     plt.legend()
-    plt.savefig('distanceplot_' + os.path.basename(image_filename) +
+    plt.savefig('distanceplot_' + os.path.basename(image_filename).split('.')[0] +
                 '.png', dpi=600, bbox_inches='tight')
     plt.show()
+
+
+def mk_cat_stars_in_image(catalogue, image_filename):
+    """ Makes a new catalogue containing only the stars in variable catalogue on image image_filename. """
+
+    good_indices = get_indices_of_stars(catalogue, image_filename)
+    data = pd.read_csv(catalogue)
+    subset = data.iloc[good_indices]
+
+    subset.to_csv(
+        'stars_in_' + os.path.basename(image_filename).split('.')[0] + '.csv')
