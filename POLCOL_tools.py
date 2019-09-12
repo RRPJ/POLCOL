@@ -258,9 +258,85 @@ def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
 
+def plot_rht_distr(x, y, save, image_filename):
+    """ Plot the RHT angle distribution. Saves if save is true. """
+
+    plt.plot(x, y, label='RHT angle distribution')
+    plt.xlabel('Polarisation angle (degrees)')
+    plt.ylabel('Intensity (normalised)')
+    plt.legend()
+
+    if(save):
+        plt.savefig('rhtdistribution_' + os.path.basename(image_filename).split('.')[0] +
+                    '.png', dpi=600, bbox_inches='tight')
+
+    plt.show()
+
+
+def fit_gaussians(x, y):
+    """ Fits choice amount of Gaussians (user input) after seeing the RHT angle distribution from plot_dist_polangle. """
+
+    choice = int(input("How many peaks do you want to fit? "))
+    mu_seen = []
+    sig_seen = []
+    int_mu_seen = []
+
+    for n in range(len(y)):
+        mu_est = x[np.argsort(-y)[n]]  # Descending order
+        sig_est = 20
+        popt, pcov = curve_fit(gaussian, x,
+                               y, p0=[int(mu_est), sig_est])
+
+        # We do not want the same Gaussians every time - only unique ones
+        if int(popt[0]) not in int_mu_seen:
+            int_mu_seen.append(int(popt[0]))
+            mu_seen.append(popt[0])
+            sig_seen.append(popt[1])
+
+            plt.plot(x, gaussian(x, popt[0], popt[1]), label='Gaussian fit: mu=' + str(
+                np.round(popt[0], 3)) + ', sig=' + str(np.round(popt[1], 3)))
+
+            # If we have the desired amount of Gaussians, break it off.
+            if(len(mu_seen) == choice):
+                break
+            else:
+                continue
+
+    return mu_seen, sig_seen
+
+
+def shift_stars_on_plot(pol_angle, mu_seen):
+    """ Shift stars modulo pi by how much they are separated from the RHT bars. If there is only one, you want stars to shift if they are more than 90 degrees away from the bar. If there are more, you need to shift if the total difference between highest and lowest bar, and the stars, exceeds 180 degrees. Returns the new polarisation angle list of the stars. """
+
+    # Put star as close to RHT bars as possible: (modulo pi)
+    l = list(pol_angle)
+
+    # Base case: 1 bar
+    if(len(mu_seen) == 1):
+        # Stars too low
+        i = [x for x in np.concatenate(np.where(mu_seen[0] - l > 90))]
+        # Stars too high
+        j = [y for y in np.concatenate(np.where(l - mu_seen[0] > 90))]
+
+    # Otherwise: 2 or more bars
+    else:
+        i = [x for x in np.concatenate(
+            np.where(np.max(mu_seen) - l + np.min(mu_seen) - l > 180))]
+        j = [y for y in np.concatenate(
+            np.where(l - np.max(mu_seen) + l - np.min(mu_seen) > 180))]
+
+    for index in i:
+        l[index] += 180
+    for index in j:
+        l[index] -= 180
+
+    return l
+
+
 def plot_dist_polangle(catalogue, image_filename):
     """ Plots the distance versus polarisation angle plot. This contains the stars, but also the RHT angle around the stars, averaged. This means that you assume that you are looking at one "zone" with a related RHT angle. """
 
+    # Load in data
     pol_angle, err_pol_angle, dist, dist_err_low, dist_err_high, thets_deg, h_norm = extract_data(
         catalogue, image_filename)
 
@@ -270,38 +346,19 @@ def plot_dist_polangle(catalogue, image_filename):
     o = np.argsort(thets_shifted)
     thets_sorted = np.sort(thets_shifted)
 
-    # Find normal distribution fit on data
-    mu_est = thets_sorted[np.where(h_norm[o] == 1)]
-    sig_est = 20  # Not sure about this one, mostly goes well
-    popt, pcov = curve_fit(gaussian, thets_sorted,
-                           h_norm[o], p0=[int(mu_est), sig_est])
+    plot_rht_distr(thets_sorted, h_norm[o], False, image_filename)
+    mu_seen, sig_seen = fit_gaussians(thets_sorted, h_norm[o])
+    plot_rht_distr(thets_sorted, h_norm[o], True, image_filename)
+    l = shift_stars_on_plot(pol_angle, mu_seen)
 
-    plt.plot(thets_sorted, h_norm[o], label='RHT angle distribution')
-    plt.plot(thets_sorted, gaussian(thets_sorted,
-                                    popt[0], popt[1]), label='Gaussian fit')
-    plt.xlabel('Polarisation angle (degrees)')
-    plt.ylabel('Intensity (normalised)')
-    plt.legend()
-    plt.savefig('rhtdistribution_' + os.path.basename(image_filename).split('.')[0] +
-                '.png', dpi=600, bbox_inches='tight')
-    plt.show()
-
-    # Put star as close to RHT bar as possible: (modulo pi)
-    l = list(pol_angle)
-    # Stars "too low" on plot
-    i = [x for x in np.concatenate(np.where(popt[0] - l > 90))]
-    # Stars "too high" on plot
-    j = [y for y in np.concatenate(np.where(l - popt[0] > 90))]
-
-    for index in i:
-        l[index] += 180
-    for index in j:
-        l[index] -= 180
+    # Distance - angle plot of stars
+    for i in range(len(mu_seen)):
+        plt.barh(mu_seen[i], height=sig_seen[i], width=1.1 * np.max(dist),
+                 alpha=0.5, label='RHT angle, peak ' + str(i + 1))
 
     plt.errorbar(dist, l, xerr=[dist - dist_err_low, dist_err_high - dist],
                  yerr=err_pol_angle, linestyle='none', marker='*', markersize=10, label='stars')
-    plt.barh(popt[0], height=popt[1], width=1.1 * np.max(dist), alpha=0.5,
-             facecolor='g', label='RHT angle 1-sigma range')
+
     plt.xlabel('Distance (pc)')
     plt.ylabel('Polarisation angle (degrees)')
     plt.legend()
