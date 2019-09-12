@@ -334,7 +334,7 @@ def shift_stars_on_plot(pol_angle, mu_seen):
 
 
 def plot_dist_polangle(catalogue, image_filename):
-    """ Plots the distance versus polarisation angle plot. This contains the stars, but also the RHT angle around the stars, averaged. This means that you assume that you are looking at one "zone" with a related RHT angle. """
+    """ Plots the distance versus polarisation angle plot. This contains the stars, but also the RHT angle around the stars, denoted by coloured bars. This means that you assume that you are looking at one "zone" with a related RHT angle, or some complexion of multiple sheets. """
 
     # Load in data
     pol_angle, err_pol_angle, dist, dist_err_low, dist_err_high, thets_deg, h_norm = extract_data(
@@ -357,7 +357,7 @@ def plot_dist_polangle(catalogue, image_filename):
                  alpha=0.5, label='RHT angle, peak ' + str(i + 1))
 
     plt.errorbar(dist, l, xerr=[dist - dist_err_low, dist_err_high - dist],
-                 yerr=err_pol_angle, linestyle='none', marker='*', markersize=10, label='stars')
+                 yerr=err_pol_angle, linestyle='none', marker='*', markersize=10, label=str(len(l)) + ' stars')
 
     plt.xlabel('Distance (pc)')
     plt.ylabel('Polarisation angle (degrees)')
