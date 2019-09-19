@@ -22,7 +22,7 @@ original = True
 # Cut a piece or whole image? True: cut a piece, false: whole image
 cut = True
 if(cut):
-    cutout_filename = cutout(image_filename, position, size, circle=True)
+    cutout_filename = cutout(image_filename, position, size, circ=True)
 else:
     cutout_filename = image_filename  # For whole picture
 
