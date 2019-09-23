@@ -47,9 +47,7 @@ def cutout(filename, position, size, circ):
         circle_pix = CirclePixelRegion(PixCoord(len(cutout.data[:,1])//2,len(cutout.data[1,:])//2), radius=np.min(size)/2) #region object
         for i in range(len(cutout.data[:,1])):          
             for j in range(len(cutout.data[1,:])):
-                if PixCoord(i,j) in circle_pix:
-                    cutout.data[i,j] = cutout.data[i,j]
-                else:
+                if not PixCoord(i,j) in circle_pix:
                     cutout.data[i,j] = 'nan'
             
         # Write the cutout to a new FITS file
