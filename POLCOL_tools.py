@@ -10,6 +10,8 @@ from astropy.nddata import Cutout2D
 from astropy.utils.data import download_file
 from astropy.wcs import WCS
 
+from regions import PixCoord, CirclePixelRegion
+
 import rht
 import RHT_tools
 from scipy.optimize import curve_fit
@@ -23,7 +25,7 @@ from mpl_toolkits.axisartist.grid_finder import MaxNLocator
 from mpl_toolkits.axisartist.grid_finder import DictFormatter
 
 
-def cutout(filename, position, size):
+def cutout(filename, position, size, circ):
     """ Cut out a square of size size at center position position of the filename filename. Returns: the cut out filename, so it can be used in other scripts. """
 
     # Load the image and the WCS
@@ -40,12 +42,27 @@ def cutout(filename, position, size):
     # Update the FITS header with the cutout WCS
     hdu.header.update(cutout.wcs.to_header())
 
-    # Write the cutout to a new FITS file
-    cutout_filename = filename.split(
-        '.')[0] + '_cutout.' + filename.split('.')[1]
-    hdu.writeto(cutout_filename, overwrite=True)
+      # Choose whether you want a circle or a square 
+    if (circ):
+        # Define a circle region and keep only data that is in that region
+        circle_pix = CirclePixelRegion(PixCoord(len(cutout.data[:,1])//2,len(cutout.data[1,:])//2), radius=np.min(size)/2) #region object
+        for i in range(len(cutout.data[:,1])):          
+            for j in range(len(cutout.data[1,:])):
+                if not PixCoord(i,j) in circle_pix:
+                    cutout.data[i,j] = 'nan'
+            
+        # Write the cutout to a new FITS file
+        cutout_filename = filename.split('.')[0] + '_cutout_circ.' + filename.split('.')[1]
+        hdu.writeto(cutout_filename, overwrite=True)
+    
+        print("Made circle cutout, output: " + cutout_filename)
 
-    print("Made cutout, output: " + cutout_filename)
+    else:    
+        # Write the cutout to a new FITS file
+        cutout_filename = filename.split('.')[0] + '_cutout.' + filename.split('.')[1]
+        hdu.writeto(cutout_filename, overwrite=True)
+         
+        print("Made cutout, output: " + cutout_filename)
 
     # Return the output filename so we can use it in other scripts
     return cutout_filename
