@@ -2,14 +2,8 @@ from rht import xyt_name_factory, main
 from POLCOL_tools import cutout, plot_dist_polangle, make_polarplot
 
 
-# Variables for cutting out a square from the original fits file
-x1, x2 = (500, 700)  # x pixel borders
-y1, y2 = (500, 700)  # y pixel borders
-
-position = ((x1 + x2) / 2., (y1 + y2) / 2.)  # x,y
-size = (y2 - y1, x2 - x1)  # NOTE: y,x
-image_filename = '/dir/file.fits'
-catalogue = '/dir/file.csv'
+image_filename = 'HetDex.fits'
+catalogue = 'master_cat_dist.csv'
 # square_size = 7  # Must be odd, not implemented
 
 # Calculation parameters for RHT (Standard 55, 0.70, 15, True)
@@ -21,6 +15,15 @@ original = True
 # Run the cutout script and save its resulting filename
 # Cut a piece or whole image? True: cut a piece, false: whole image
 cut = True
+
+# Variables for cutting out a rectangle from the original fits file
+# Ignore if cut = False
+x1, x2 = (400, 600)  # x pixel borders
+y1, y2 = (400, 600)  # y pixel borders
+
+position = ((x1 + x2) / 2., (y1 + y2) / 2.)  # x,y
+size = (y2 - y1, x2 - x1)  # NOTE: y,x
+
 if(cut):
     cutout_filename = cutout(image_filename, position, size, circ=True)
 else:

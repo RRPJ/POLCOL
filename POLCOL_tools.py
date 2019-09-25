@@ -11,6 +11,8 @@ from astropy.utils.data import download_file
 from astropy.wcs import WCS
 from regions import PixCoord, CirclePixelRegion
 
+from regions import PixCoord, CirclePixelRegion
+
 import rht
 import RHT_tools
 from scipy.optimize import curve_fit
@@ -25,7 +27,7 @@ from mpl_toolkits.axisartist.grid_finder import DictFormatter
 
 
 def cutout(filename, position, size, circ):
-    """ Cut out a square of size size or a circle of radius size/2 at center position position of the filename filename. Returns: the cut out filename, so it can be used in other scripts. """
+    """ Cut out a square of size size at center position position of the filename filename. Returns: the cut out filename, so it can be used in other scripts. """
 
     # Load the image and the WCS
     hdu = fits.open(filename)[0]
