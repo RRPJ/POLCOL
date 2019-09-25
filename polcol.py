@@ -25,7 +25,7 @@ position = ((x1 + x2) / 2., (y1 + y2) / 2.)  # x,y
 size = (y2 - y1, x2 - x1)  # NOTE: y,x
 
 if(cut):
-    cutout_filename = cutout(image_filename, position, size, circ = True)
+    cutout_filename = cutout(image_filename, position, size, circ=True)
 else:
     cutout_filename = image_filename  # For whole picture
 

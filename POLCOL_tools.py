@@ -9,6 +9,7 @@ from astropy.io import fits
 from astropy.nddata import Cutout2D
 from astropy.utils.data import download_file
 from astropy.wcs import WCS
+from regions import PixCoord, CirclePixelRegion
 
 from regions import PixCoord, CirclePixelRegion
 
@@ -42,7 +43,7 @@ def cutout(filename, position, size, circ):
     # Update the FITS header with the cutout WCS
     hdu.header.update(cutout.wcs.to_header())
 
-      # Choose whether you want a circle or a square 
+    # Choose whether you want a circle or a square 
     if (circ):
         # Define a circle region and keep only data that is in that region
         circle_pix = CirclePixelRegion(PixCoord(len(cutout.data[:,1])//2,len(cutout.data[1,:])//2), radius=np.min(size)/2) #region object
@@ -57,7 +58,7 @@ def cutout(filename, position, size, circ):
     
         print("Made circle cutout, output: " + cutout_filename)
 
-    else:    
+    else:
         # Write the cutout to a new FITS file
         cutout_filename = filename.split('.')[0] + '_cutout.' + filename.split('.')[1]
         hdu.writeto(cutout_filename, overwrite=True)
