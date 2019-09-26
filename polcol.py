@@ -15,6 +15,7 @@ original = True
 
 # Run the cutout script and save its resulting filename
 # Cut a piece or whole image? True: cut a piece, false: whole image
+# Set circle to True if you want a circle cutout rather than a square
 
 cut = False
 circle = False
