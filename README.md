@@ -10,7 +10,7 @@ To use, simply open polcol.py in a text editor. There are a couple of things to 
 
 1. image_filename: input your image filename in string form
 2. catalogue: input your stellar catalogue in string form. Future releases may also support other tracers.
-3. Decide if you want to cut out a rectangle or take the whole image to run into the RHT. For the first, set "cut" to True, and change x1, x2 and y1, y2 to values desired. The script cuts out a rectangle of (x2 - x1) by (y2 - x1). 
+3. Decide if you want to cut out a rectangle or take the whole image to run into the RHT. For the first, set "cut" to True, and change x1, x2 and y1, y2 to values desired. The script cuts out a rectangle of (x2 - x1) by (y2 - x1). If you want a circle rather than a square, set circle to True.
 4. Set the RHT parameters to your choice. Default values are given in comment. 
 5. Open rht.py in a text editor, and set OUTPUT to a directory of your choice. This directory doesn't need to exist yet.
 6. Set polar to True if you want a polarplot, and distance to True if you want a distance - polarisation angle plot. The script saves the images in current working directory.
