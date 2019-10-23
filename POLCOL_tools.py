@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import seaborn as sns
 import os
 import csv
@@ -43,26 +45,29 @@ def cutout(filename, position, size, circ):
     # Update the FITS header with the cutout WCS
     hdu.header.update(cutout.wcs.to_header())
 
-    # Choose whether you want a circle or a square 
+    # Choose whether you want a circle or a square
     if (circ):
         # Define a circle region and keep only data that is in that region
-        circle_pix = CirclePixelRegion(PixCoord(len(cutout.data[:,1])//2,len(cutout.data[1,:])//2), radius=np.min(size)/2) #region object
-        for i in range(len(cutout.data[:,1])):          
-            for j in range(len(cutout.data[1,:])):
-                if not PixCoord(i,j) in circle_pix:
-                    cutout.data[i,j] = 'nan'
-            
+        circle_pix = CirclePixelRegion(PixCoord(len(cutout.data[:, 1]) // 2, len(
+            cutout.data[1, :]) // 2), radius=np.min(size) / 2)  # region object
+        for i in range(len(cutout.data[:, 1])):
+            for j in range(len(cutout.data[1, :])):
+                if not PixCoord(i, j) in circle_pix:
+                    cutout.data[i, j] = 'nan'
+
         # Write the cutout to a new FITS file
-        cutout_filename = filename.split('.')[0] + '_cutout_circ.' + filename.split('.')[1]
+        cutout_filename = filename.split(
+            '.')[0] + '_cutout_circ.' + filename.split('.')[1]
         hdu.writeto(cutout_filename, overwrite=True)
-    
+
         print("Made circle cutout, output: " + cutout_filename)
 
     else:
         # Write the cutout to a new FITS file
-        cutout_filename = filename.split('.')[0] + '_cutout.' + filename.split('.')[1]
+        cutout_filename = filename.split(
+            '.')[0] + '_cutout.' + filename.split('.')[1]
         hdu.writeto(cutout_filename, overwrite=True)
-         
+
         print("Made cutout, output: " + cutout_filename)
 
     # Return the output filename so we can use it in other scripts
@@ -279,6 +284,7 @@ def gaussian(x, mu, sig):
 def plot_rht_distr(x, y, save, image_filename):
     """ Plot the RHT angle distribution. Saves if save is true. """
 
+    fig = plt.figure(figsize=(18, 9))
     plt.plot(x, y, label='RHT angle distribution')
     plt.xlabel('Polarisation angle (degrees)')
     plt.ylabel('Intensity (normalised)')
@@ -291,62 +297,17 @@ def plot_rht_distr(x, y, save, image_filename):
     plt.show()
 
 
-def fit_gaussians(x, y):
-    """ Fits choice amount of Gaussians (user input) after seeing the RHT angle distribution from plot_dist_polangle. """
-
-    choice = int(input("How many peaks do you want to fit? "))
-    mu_seen = []
-    sig_seen = []
-    int_mu_seen = []
-
-    for n in range(len(y)):
-        mu_est = x[np.argsort(-y)[n]]  # Descending order
-        sig_est = 20
-        popt, pcov = curve_fit(gaussian, x,
-                               y, p0=[int(mu_est), sig_est])
-
-        # We do not want the same Gaussians every time - only unique ones
-        if int(popt[0]) not in int_mu_seen:
-            int_mu_seen.append(int(popt[0]))
-            mu_seen.append(popt[0])
-            sig_seen.append(popt[1])
-
-            plt.plot(x, gaussian(x, popt[0], popt[1]), label='Gaussian fit: mu=' + str(
-                np.round(popt[0], 3)) + ', sig=' + str(np.round(popt[1], 3)))
-
-            # If we have the desired amount of Gaussians, break it off.
-            if(len(mu_seen) == choice):
-                break
-            else:
-                continue
-
-    return mu_seen, sig_seen
-
-
-def shift_stars_on_plot(pol_angle, mu_seen):
+def shift_stars_on_plot(pol_angle, thets_sorted):
     """ Shift stars modulo pi by how much they are separated from the RHT bars. If there is only one, you want stars to shift if they are more than 90 degrees away from the bar. If there are more, you need to shift if the total difference between highest and lowest bar, and the stars, exceeds 180 degrees. Returns the new polarisation angle list of the stars. """
 
     # Put star as close to RHT bars as possible: (modulo pi)
     l = list(pol_angle)
 
-    # Base case: 1 bar
-    if(len(mu_seen) == 1):
-        # Stars too low
-        i = [x for x in np.concatenate(np.where(mu_seen[0] - l > 90))]
-        # Stars too high
-        j = [y for y in np.concatenate(np.where(l - mu_seen[0] > 90))]
-
-    # Otherwise: 2 or more bars
-    else:
-        i = [x for x in np.concatenate(
-            np.where(np.max(mu_seen) - l + np.min(mu_seen) - l > 180))]
-        j = [y for y in np.concatenate(
-            np.where(l - np.max(mu_seen) + l - np.min(mu_seen) > 180))]
-
-    for index in i:
-        l[index] += 180
-    for index in j:
-        l[index] -= 180
+    for index, value in enumerate(l):
+        if(l[index] < np.min(thets_sorted)):
+            l[index] += 180
+        elif(l[index] > np.max(thets_sorted)):
+            l[index] -= 180
 
     return l
 
@@ -360,23 +321,24 @@ def plot_dist_polangle(catalogue, image_filename):
 
     # Shift lower half of plot since polarisation is modulo pi
     thets_shifted = thets_deg
-    thets_shifted[0:59] += 180
+    thets_shifted[0: 59] += 180
     o = np.argsort(thets_shifted)
     thets_sorted = np.sort(thets_shifted)
 
-    plot_rht_distr(thets_sorted, h_norm[o], False, image_filename)
-    mu_seen, sig_seen = fit_gaussians(thets_sorted, h_norm[o])
-    plot_rht_distr(thets_sorted, h_norm[o], True, image_filename)
-    l = shift_stars_on_plot(pol_angle, mu_seen)
+    # plot_rht_distr(thets_sorted, h_norm[o], True, image_filename)
 
-    # Distance - angle plot of stars
-    for i in range(len(mu_seen)):
-        plt.barh(mu_seen[i], height=sig_seen[i], width=1.1 * np.max(dist),
-                 alpha=0.5, label='RHT angle, peak ' + str(i + 1))
+    l = shift_stars_on_plot(pol_angle, thets_sorted)
+
+    fig = plt.figure(figsize=(18, 9))
+    cmap = plt.cm.YlOrRd
+    plot = plt.barh(thets_sorted, width=1.1 * np.max(dist),
+                    alpha=0.8, color=cmap(h_norm[o]))
+    sm = matplotlib.cm.ScalarMappable(cmap=cmap)
+    sm.set_array([])
+    plt.colorbar(sm, label='RHT intensity')
 
     plt.errorbar(dist, l, xerr=[dist - dist_err_low, dist_err_high - dist],
                  yerr=err_pol_angle, linestyle='none', marker='*', markersize=10, label=str(len(l)) + ' stars')
-
     plt.xlabel('Distance (pc)')
     plt.ylabel('Polarisation angle (degrees)')
     plt.legend()
