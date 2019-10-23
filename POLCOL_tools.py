@@ -325,7 +325,7 @@ def plot_dist_polangle(catalogue, image_filename):
     o = np.argsort(thets_shifted)
     thets_sorted = np.sort(thets_shifted)
 
-    # plot_rht_distr(thets_sorted, h_norm[o], True, image_filename)
+    plot_rht_distr(thets_sorted, h_norm[o], True, image_filename)
 
     l = shift_stars_on_plot(pol_angle, thets_sorted)
 
