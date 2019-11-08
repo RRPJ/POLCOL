@@ -286,7 +286,7 @@ def plot_rht_distr(x, y, save, image_filename):
 
     fig = plt.figure(figsize=(18, 9))
     plt.plot(x, y, label='RHT angle distribution')
-    plt.xlabel('Polarisation angle (degrees)')
+    plt.xlabel('Directional angle (degrees)')
     plt.ylabel('Intensity (normalised)')
     plt.legend()
 
