@@ -340,7 +340,7 @@ def plot_dist_polangle(catalogue, image_filename):
     plt.errorbar(dist, l, xerr=[dist - dist_err_low, dist_err_high - dist],
                  yerr=err_pol_angle, linestyle='none', marker='*', markersize=10, label=str(len(l)) + ' stars')
     plt.xlabel('Distance (pc)')
-    plt.ylabel('Polarisation angle (degrees)')
+    plt.ylabel('Angle (degrees)')
     plt.legend()
     plt.savefig('distanceplot_' + os.path.basename(image_filename).split('.')[0] +
                 '.png', dpi=600, bbox_inches='tight')
