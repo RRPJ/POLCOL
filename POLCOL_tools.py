@@ -218,37 +218,37 @@ def restrict_xpix_and_ypix(catalogue, image_filename):
     return np.transpose([xpix, ypix])
 
 
-def draw_squares(catalogue, image_filename, square_size):
-    """ "Draws" squares around the stars found in get_xpix_and_ypix. This function outputs the pixel values that the RHT angle must be extracted from. Square_size must be odd, as we draw (square_size - 1) / 2 dots on each side. """
+# def draw_squares(catalogue, image_filename, square_size):
+#     """ "Draws" squares around the stars found in get_xpix_and_ypix. This function outputs the pixel values that the RHT angle must be extracted from. Square_size must be odd, as we draw (square_size - 1) / 2 dots on each side. """
+#
+#     if(square_size % 2 == 0):
+#         print("Please input an odd square_size")
+#         return -1
+#
+#     XX = []
+#     YY = []
+#
+#     star_pixcoords = restrict_xpix_and_ypix(catalogue, image_filename)
+#     rounded = np.round(star_pixcoords)
+#
+#     s = (square_size - 1) / 2
+#
+#     for el in rounded:
+#         pixel_range = np.transpose(np.linspace(
+#             el - s, el + s, square_size))
+#
+#         xx, yy = np.meshgrid(pixel_range[0], pixel_range[1])
+#         # plt.plot(xx, yy, marker='.', linestyle='none')
+#         XX.append(xx)
+#         YY.append(yy)
+#
+#     # plt.show()
+#
+#     return XX, YY
 
-    if(square_size % 2 == 0):
-        print("Please input an odd square_size")
-        return -1
 
-    XX = []
-    YY = []
-
-    star_pixcoords = restrict_xpix_and_ypix(catalogue, image_filename)
-    rounded = np.round(star_pixcoords)
-
-    s = (square_size - 1) / 2
-
-    for el in rounded:
-        pixel_range = np.transpose(np.linspace(
-            el - s, el + s, square_size))
-
-        xx, yy = np.meshgrid(pixel_range[0], pixel_range[1])
-        # plt.plot(xx, yy, marker='.', linestyle='none')
-        XX.append(xx)
-        YY.append(yy)
-
-    # plt.show()
-
-    return XX, YY
-
-
-def extract_data(catalogue, image_filename):
-    """ Gets the RHT angle average from the pixels in the square around each star. Also gets the star's polarisation angle and error, aswell as its distance and error. """
+def get_RHT_and_star_data(catalogue, image_filename):
+    """ Gets the RHT angle average from the pixels in image_filename. Also gets the stars' polarisation angle and error, aswell as its distance and error for all stars in catalogue that lie on image_filename. """
 
     # Star polarisation angle, polarisation error and distance
     data = pd.read_csv(catalogue)
@@ -260,25 +260,13 @@ def extract_data(catalogue, image_filename):
     dist_err_low = data['r_lo'][good_indices]
     dist_err_high = data['r_hi'][good_indices]
 
-    # NOTE: angles from squares not implemented yet.
-    # XX, YY = draw_squares(catalogue, image_filename, square_size)
-
-    # RHT angle average calculation
-    ipoints, jpoints, hthets, naxis1, naxis2, wlen, smr, thresh = RHT_tools.get_RHT_data(
+    ipoints, jpoints, hthets, naxis1, naxis2, wlen, smr, thresh, thets_deg = get_all_RHT_data(
         image_filename)
 
     h = np.sum(hthets, axis=0)
     h_norm = h / np.max(h)  # Total intensity per angle found, normalised.
 
-    thets_arr = RHT_tools.get_thets(
-        wlen, save=False)  # x-axis containing angles
-    thets_deg = thets_arr * 180 / np.pi
-
     return pol_angle, err_pol_angle, dist, dist_err_low, dist_err_high, thets_deg, h_norm
-
-
-def gaussian(x, mu, sig):
-    return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
 
 def plot_rht_distr(x, y, save, image_filename):
@@ -312,11 +300,74 @@ def shift_stars_on_plot(pol_angle, thets_sorted):
     return l
 
 
+def get_all_RHT_data(image_filename):
+    ipoints, jpoints, hthets, naxis1, naxis2, wlen, smr, thresh = RHT_tools.get_RHT_data(
+        image_filename)
+
+    thets_arr = RHT_tools.get_thets(
+        wlen, save=False)  # x-axis containing angles
+    thets_deg = thets_arr * 180 / np.pi
+
+    return ipoints, jpoints, hthets, naxis1, naxis2, wlen, smr, thresh, thets_deg
+
+
+def angle_in_circle(image_filename, position_of_star, rht_data, radius):
+    """ Gets a star, draws a circle around it and returns the average rht angle and standard deviation in this circle. """
+
+    ipoints, jpoints, hthets, naxis1, naxis2, wlen, smr, thresh, thets_deg = rht_data
+
+    c = CirclePixelRegion(
+        PixCoord(np.round(position_of_star)[0], np.round(position_of_star)[1]), radius=radius)
+
+    # Check which RHT data is in this region, these are the indices:
+    indices = c.contains(PixCoord(ipoints, jpoints))
+    # hthets[indices] are all the pixel angle distributions found in the circle
+
+    # Loop through pixels:
+    # We multiply by thets_deg to get angle distribution, then normalise by dividing by the sum of the distribution, and finally take the sum of all values to get the average angle.
+    average_on_pixel = []
+    for i, v in enumerate(hthets[indices]):
+        average_on_pixel.append((hthets[indices][i] * thets_deg /
+                                 hthets[indices][i].sum()).sum())
+
+    return np.mean(average_on_pixel), np.std(average_on_pixel)
+
+
+def rht_values_around_stars(catalogue, image_filename, radius=50):
+    """ Returns all the RHT angles with standard deviations of stars in catalogue on image_filename. It takes a radius, looks in a circle around all the stars in this radius and calculates averages and standard deviations in RHT angle in this circle around all the stars. """
+
+    rht_data = get_all_RHT_data(
+        image_filename)
+
+    positions = restrict_xpix_and_ypix(catalogue, image_filename)
+    averages = []
+    stdevs = []
+
+    for el in positions:
+        a, b = angle_in_circle(image_filename, el, rht_data, radius)
+        averages.append(a)
+        stdevs.append(b)
+
+    return averages, stdevs
+
+
+def plot_circle_data(catalogue, image_filename, x_axis, averages, stdevs):
+
+    plt.errorbar(x_axis, averages, yerr=stdevs, linestyle='none',
+                 marker='x', markersize=7, elinewidth=1, label='RHT around stars', color='black')
+
+
+def get_indices_of_notnan(rht_averages):
+    i = np.concatenate(np.where(~np.isnan(rht_averages)))
+
+    return i
+
+
 def plot_dist_polangle(catalogue, image_filename):
     """ Plots the distance versus polarisation angle plot. This contains the stars, but also the RHT angle around the stars, denoted by coloured bars. This means that you assume that you are looking at one "zone" with a related RHT angle, or some complexion of multiple sheets. """
 
     # Load in data
-    pol_angle, err_pol_angle, dist, dist_err_low, dist_err_high, thets_deg, h_norm = extract_data(
+    pol_angle, err_pol_angle, dist, dist_err_low, dist_err_high, thets_deg, h_norm = get_RHT_and_star_data(
         catalogue, image_filename)
 
     # Shift lower half of plot since polarisation is modulo pi
@@ -327,8 +378,6 @@ def plot_dist_polangle(catalogue, image_filename):
 
     plot_rht_distr(thets_sorted, h_norm[o], True, image_filename)
 
-    l = shift_stars_on_plot(pol_angle, thets_sorted)
-
     fig = plt.figure(figsize=(18, 9))
     cmap = plt.cm.YlOrRd
     plot = plt.barh(thets_sorted, width=1.1 * np.max(dist),
@@ -337,8 +386,23 @@ def plot_dist_polangle(catalogue, image_filename):
     sm.set_array([])
     plt.colorbar(sm, label='RHT intensity')
 
-    plt.errorbar(dist, l, xerr=[dist - dist_err_low, dist_err_high - dist],
-                 yerr=err_pol_angle, linestyle='none', marker='*', markersize=10, label=str(len(l)) + ' stars')
+    averages, stdevs = rht_values_around_stars(catalogue, image_filename)
+    i = get_indices_of_notnan(averages)
+
+    pol_angle_shifted = shift_stars_on_plot(pol_angle, thets_sorted)
+    averages_shifted = shift_stars_on_plot(averages, thets_sorted)
+
+    averages_shifted = [averages_shifted[j] for j in i]
+    stdevs = [stdevs[j] for j in i]
+    dist = [dist.iloc[j] for j in i]
+    dist_err_low = [dist_err_low.iloc[j] for j in i]
+    dist_err_high = [dist_err_high.iloc[j] for j in i]
+    err_pol_angle = [err_pol_angle.iloc[j] for j in i]
+    pol_angle_shifted = [pol_angle_shifted[j] for j in i]
+
+    plt.errorbar(dist, pol_angle_shifted, xerr=[np.array(dist) - np.array(dist_err_low), np.array(dist_err_high) - np.array(dist)],
+                 yerr=np.array(err_pol_angle), linestyle='none', marker='*', markersize=10, label=str(len(i)) + ' stars')
+    plot_circle_data(catalogue, image_filename, dist, averages_shifted, stdevs)
     plt.xlabel('Distance (pc)')
     plt.ylabel('Angle (degrees)')
     plt.legend()
